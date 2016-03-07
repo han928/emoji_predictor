@@ -22,12 +22,12 @@ def parse_json(tweets_data_path='data/twitter_dump.txt'):
 
 ################ creating a list of emoji  #####################
 def emoji_list():
-    df_emoji = pd.read_csv('emoji_table.txt', encoding='utf-8', index_col=0)
+    df_emoji = pd.read_csv('data/emoji_table.txt', encoding='utf-8', index_col=0)
     df_emoji['count']=0
     emoji_dict = df_emoji['count'].to_dict()
 
 
-    df_div_emoji = pd.read_csv('diversity_table.txt', encoding='utf-8', index_col=0)
+    df_div_emoji = pd.read_csv('data/diversity_table.txt', encoding='utf-8', index_col=0)
     df_div_emoji['count'] = 0
     div_emoji_keys = df_div_emoji['count'].to_dict().keys()
     human_emoji = list(set([ list(emoji)[0] for emoji in div_emoji_keys]))
@@ -43,4 +43,4 @@ def emoji_list():
 
 
 if __name__ == '__main__':
-    print parse_json()
+    el = emoji_list()
