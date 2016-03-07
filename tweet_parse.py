@@ -1,6 +1,6 @@
 from pyspark import SparkContext
 import json
-
+import re
 
 
 
@@ -28,13 +28,13 @@ def tweet_process(tweet):
 def emoji_preprocess(tweet):
     # add space before and after space
     for emoji in re.findall(REGEX, tweet):
-        tweet = tweet.replace(emoji, ' ' + x + ' ')
+        tweet = tweet.replace(emoji, ' ' + emoji + ' ')
 
-    # remove rt and @ and https://
-    
+    # tokenize and remove rt and @ and https://
 
+    tweet_token = ['<s>'] + [ wd for wd in tweet.strip('rt').split() if not wd.startswith('@') and not wd.startswith('http') ] + ['</s>']
 
-    return tweet
+    return tweet_token
 
 if __name__ == '__main__':
     tweets =  sc.textFile('data/twitter_dump_small.txt')\
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     .filter(lambda tw: tw != None)\
     .map(lambda tw: tw['text'].lower() )\
 
-
+    tweets_tokens = tweets.map(emoji_preprocess).collect()
 # successfully extract text
 # next, strip RT, http,
 # second, replace emoji with a space for word split
