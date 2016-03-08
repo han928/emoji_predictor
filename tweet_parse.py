@@ -1,7 +1,7 @@
 from pyspark import SparkContext
 import json
 import re
-
+import nltk
 
 
 # start spark instance
@@ -44,7 +44,14 @@ if __name__ == '__main__':
     .filter(lambda tw: tw != None)\
     .map(lambda tw: tw['text'].lower() )\
 
-    tweets_tokens = tweets.map(emoji_preprocess).collect()
-# successfully extract text
-# next, strip RT, http,
-# second, replace emoji with a space for word split
+    tweets_tokens = tweets.map(emoji_preprocess).collect()  # I should split the word into token and bigram and count with reduce by key
+
+
+
+
+
+
+"""
+words = corpus.split()
+cfreq_sam = nltk.ConditionalFreqDist(nltk.bigrams(words))
+cprob_sam = nltk.ConditionalProbDist(cfreq_sam, nltk.MLEProbDist"""
