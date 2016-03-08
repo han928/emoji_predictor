@@ -32,7 +32,7 @@ def emoji_preprocess(tweet):
 
     # tokenize and remove rt and @ and https://
 
-    tweet_token = ['<s>'] + [ wd for wd in tweet.strip('rt').split() if not wd.startswith('@') and not wd.startswith('http') ] + ['</s>']
+    tweet_token = ['<s>'] + [ wd for wd in tweet.strip('rt').split() if not wd.startswith('@') and not wd.startswith('http') and not wd.startswith('#') ] + ['</s>']
 
     return tweet_token
 
