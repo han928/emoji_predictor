@@ -36,6 +36,22 @@ def emoji_preprocess(tweet):
 
     return tweet_token
 
+
+def bigrams(tweet):
+    # generate bigrams from tweets
+    return list(nltk.bigrams(tweet))
+
+def trigrams(tweet):
+    # generate trigrams from tweets
+    return [((w1, w2), w3) for w1, w2, w3 in nltk.trigrams(tweet)]
+
+def quadgrams(tweet):
+    #generate n grams
+    return [((w1, w2, w3), w4) for w1, w2, w3, w4 in nltk.ngrams(tweet, 4)]
+
+
+
+
 if __name__ == '__main__':
     tweets =  sc.textFile('data/twitter_dump_small.txt')\
     .filter(lambda tw: len(tw)>1)\
@@ -46,12 +62,9 @@ if __name__ == '__main__':
 
     tweets_tokens = tweets.map(emoji_preprocess).collect()  # I should split the word into token and bigram and count with reduce by key
 
+    bigram_count = tweets.map(emoji_preprocess).flatMap(bigrams).map(lambda bg: (bg, 1)).reduceByKey(lambda cnt1, cnt2: cnt1+cnt2).collect()
+    trigram_count = tweets.map(emoji_preprocess).flatMap(trigrams).map(lambda bg: (bg, 1)).reduceByKey(lambda cnt1, cnt2: cnt1+cnt2).collect()
 
 
 
-
-
-"""
-words = corpus.split()
-cfreq_sam = nltk.ConditionalFreqDist(nltk.bigrams(words))
-cprob_sam = nltk.ConditionalProbDist(cfreq_sam, nltk.MLEProbDist"""
+# I have not preprocess (stem, lematize)

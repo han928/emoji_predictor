@@ -26,7 +26,6 @@ def emoji_list():
     df_emoji['count']=0
     emoji_dict = df_emoji['count'].to_dict()
 
-
     df_div_emoji = pd.read_csv('data/diversity_table.txt', encoding='utf-8', index_col=0)
     df_div_emoji['count'] = 0
     div_emoji_keys = df_div_emoji['count'].to_dict().keys()
