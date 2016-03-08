@@ -50,9 +50,7 @@ def quadgrams(tweet):
     return [((w1, w2, w3), w4) for w1, w2, w3, w4 in nltk.ngrams(tweet, 4)]
 
 
-
-
-if __name__ == '__main__':
+def main_funcion():
     tweets =  sc.textFile('data/twitter_dump_small.txt')\
     .filter(lambda tw: len(tw)>1)\
     .filter(lambda tw: 'created_at' in tw)\
@@ -64,7 +62,23 @@ if __name__ == '__main__':
 
     bigram_count = tweets.map(emoji_preprocess).flatMap(bigrams).map(lambda bg: (bg, 1)).reduceByKey(lambda cnt1, cnt2: cnt1+cnt2).collect()
     trigram_count = tweets.map(emoji_preprocess).flatMap(trigrams).map(lambda bg: (bg, 1)).reduceByKey(lambda cnt1, cnt2: cnt1+cnt2).collect()
+    quadgrams_count = tweets.map(emoji_preprocess).flatMap(quadgrams).map(lambda bg: (bg, 1)).reduceByKey(lambda cnt1, cnt2: cnt1+cnt2).collect()
+
+
+    bigram_dict = defaultdict(Counter)
+    trigram_dict = defaultdict(Counter)
+    quadgram_dict= defaultdict(Counter)
+    for (((w0,),w1) , cnt) in bigram_count:
+        bigram_dict[w0][w1] = cnt
+
+    for (((w0, w1), w2), cnt) in trigram_count:
+        trigram_dict[(w0, w1)][w2] = cnt
+
+    for (((w0, w1, w2), w3), cnt) in quadgrams_count:
+        quadgram_dict[(w0, w1, w2)][w3] = cnt
 
 
 
+if __name__ == '__main__':
+    main_funcion()
 # I have not preprocess (stem, lematize)
