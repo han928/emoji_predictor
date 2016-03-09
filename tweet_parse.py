@@ -2,6 +2,9 @@ from pyspark import SparkContext
 import json
 import re
 import nltk
+from collections import Counter, defaultdict
+from nltk.stem.snowball import SnowballStemmer
+from nltk.stem.wordnet import WordNetLemmatizer
 
 
 # start spark instance
@@ -51,7 +54,7 @@ def quadgrams(tweet):
 
 
 def main_funcion():
-    tweets =  sc.textFile('data/twitter_dump_small.txt')\
+    tweets =  sc.textFile('data/twitter_dump.txt')\
     .filter(lambda tw: len(tw)>1)\
     .filter(lambda tw: 'created_at' in tw)\
     .map(tweet_process)\
@@ -77,8 +80,18 @@ def main_funcion():
     for (((w0, w1, w2), w3), cnt) in quadgrams_count:
         quadgram_dict[(w0, w1, w2)][w3] = cnt
 
+    return bigram_dict, trigram_dict, quadgram_dict
+
+def make_predictions(string):
+    # train the model
+    bigram_dict, trigram_dict, quadgram_dict = main_funcion
+
+    # preprocess the string as you preprocess tweets
+    process_string = emoji_preprocess(string)
+
+
 
 
 if __name__ == '__main__':
-    main_funcion()
+    make_predictions('hey man how are')
 # I have not preprocess (stem, lematize)
