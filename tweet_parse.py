@@ -9,6 +9,9 @@ from nltk.stem.wordnet import WordNetLemmatizer
 
 # start spark instance
 sc = SparkContext()
+# set up stemming agent
+snowball = SnowballStemmer('english')
+wordnet = WordNetLemmatizer()
 
 
 # REGEX for finding emoji
@@ -28,17 +31,26 @@ def tweet_process(tweet):
         return None
 
 
-def emoji_preprocess(tweet):
+
+def emoji_preprocess(tweet, predict=False):
     # add space before and after space
     for emoji in re.findall(REGEX, tweet):
         tweet = tweet.replace(emoji, ' ' + emoji + ' ')
 
     # tokenize and remove rt and @ and https://
+    tweet = re.sub('\?', '', tweet)
+    tweet = re.sub('\.', '', tweet)
+    tweet = re.sub(',', '', tweet)
+    tweet = re.sub('!', '', tweet)
 
-    tweet_token = ['<s>'] + [ wd for wd in tweet.strip('rt').split() if not wd.startswith('@') and not wd.startswith('http') and not wd.startswith('#') ] + ['</s>']
+    tweet_tmp = [ snowball.stem(wd) for wd in tweet.strip('rt').split() if not wd.startswith('@') and not wd.startswith('http') and not wd.startswith('#') ]
+
+    if predict:
+        tweet_token = ['<s>'] + tweet_tmp
+    else:
+        tweet_token = ['<s>'] + tweet_tmp + ['</s>']
 
     return tweet_token
-
 
 def bigrams(tweet):
     # generate bigrams from tweets
@@ -71,6 +83,8 @@ def main_funcion():
     bigram_dict = defaultdict(Counter)
     trigram_dict = defaultdict(Counter)
     quadgram_dict= defaultdict(Counter)
+
+    # TODO(normalize counter with repect to key)
     for (((w0,),w1) , cnt) in bigram_count:
         bigram_dict[w0][w1] = cnt
 
@@ -87,9 +101,16 @@ def make_predictions(string):
     bigram_dict, trigram_dict, quadgram_dict = main_funcion
 
     # preprocess the string as you preprocess tweets
-    process_string = emoji_preprocess(string)
+    process_string = emoji_preprocess(string, predict=True)
 
+    if tuple(process_string[-3:]) in quadgram_dict:
+        return quadgram_dict[tuple(proc_str[-3:])].most_common()[0][0]
+    if tuple(process_string[-2:]) in trigram_dict:
+        return trigram_dict[tuple(proc_str[-3:])].most_common()[0][0]
+    if tuple(process_string[-1:]) in trigram_dict:
+        return trigram_dict[tuple(proc_str[-3:])].most_common()[0][0]
 
+    return ''
 
 
 if __name__ == '__main__':
