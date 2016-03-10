@@ -1,3 +1,4 @@
+from __future__ import division
 from pyspark import SparkContext
 import json
 import re
@@ -5,6 +6,8 @@ import nltk
 from collections import Counter, defaultdict
 from nltk.stem.snowball import SnowballStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
+import numpy as np
+
 
 class WordPredictor(object):
 
@@ -44,7 +47,7 @@ class WordPredictor(object):
         if predict:
             tweet_token = ['<s>'] + tweet_tmp
         else:
-            tweet_token = ['<s>'] + tweet_tmp + ['</s>']
+            tweet_token = ['<s>'] + tweet_tmp #+ ['</s>']
 
         return tweet_token
 
@@ -62,12 +65,17 @@ class WordPredictor(object):
 
 
 
-    def train(self, data):
+    def fit(self, data, w_bi=1./6, w_tri=1./3, w_quad=1./2):
         """
         data: sc.textFile() object
         TODO:  save bigram, trigram, quagram dict to pickle
 
         """
+        # set weight for n_gram models, they should add up to one
+        self.w_bi = w_bi
+        self.w_tri = w_tri
+        self.w_quad = w_quad
+
         tweets =  data\
         .filter(lambda tw: len(tw)>1)\
         .filter(lambda tw: 'created_at' in tw)\
@@ -124,30 +132,95 @@ class WordPredictor(object):
                 self.quadgram_dict[key][val] = self.quadgram_dict[key][val]/float(total)
 
 
+    def _weighted_ngram(self, key, model, wt):
+        """
+        redistribute probability by weight
+        """
+        copy_mod = model[key].copy()
+
+        for gram in copy_mod:
+            copy_mod[gram] = copy_mod[gram]*wt
+        return copy_mod
 
 
+    def _backoff_model(self, proc_str):
+        bigram_mod = self._weighted_ngram(proc_str[-1:][0], self.bigram_dict, self.w_bi)
+        trigram_mod = self._weighted_ngram(tuple(proc_str[-2:]), self.trigram_dict, self.w_tri)
+        quadgram_mod = self._weighted_ngram(tuple(proc_str[-3:]), self.quadgram_dict, self.w_quad)
+        return bigram_mod + trigram_mod + quadgram_mod
 
-    def make_predictions(self, string):
-        # train the model
-
+    def predict(self, string):
+        """
+        Perform model prediction
+        string: raw string input
+        w_bi, w_tri, w_quad: weights for bigram, triagram and quadgram model,
+                            should add up to one
+        """
         # preprocess the string as you preprocess tweets
         proc_str = self._emoji_preprocess(string, predict=True)
+        stupid_backoff = self._backoff_model(proc_str)
 
-        stupid_backoff = self.bigram_dict[proc_str[-1:][0]]\
-                        + self.quadgram_dict[tuple(proc_str[-3:])]\
-                         + self.trigram_dict[tuple(proc_str[-2:])]
-
-        if len(stupid_backoff) != 0:
+        if len(stupid_backoff) != 0 and stupid_backoff != '<s>':
             return stupid_backoff.most_common()[0][0]
         else:
             return u'\U0001f600'
 
+    def _score(self, string):
+        """
+        calculate the perplexity score for a single string
+        """
+        proc_str = self._emoji_preprocess(string)
+
+        perplexity = 1.0
+
+        if len(proc_str) > 4 :
+            n = 4
+        else:
+            n = len(proc_str)
+
+        k = 0
+        for seg in nltk.ngrams(proc_str, n):
+            k += 1
+            if n==4:
+                quad = seg[:n-1]
+                tri = seg[1:n-1]
+                bi = seg[2:n-1][0]
+                pred = seg[-1]
+            print 'preplexity', perplexity
+            print 'quad', quad, self.w_quad , self.quadgram_dict[quad][pred]
+            print 'tir', tri,  self.w_tri , self.trigram_dict[tri][pred]
+            print 'bi' , bi, self.w_bi ,  self.bigram_dict[bi][pred]
+
+            perplexity *= (self.w_quad * self.quadgram_dict[quad][pred]\
+                            + self.w_tri * self.trigram_dict[tri][pred]\
+                                + self.w_bi * self.bigram_dict[bi][pred])
+
+
+        return np.power(perplexity, 1./k)
+
+
+    def perplexity_score(self, data):
+
+        tweets =  data\
+                .filter(lambda tw: len(tw)>1)\
+                .filter(lambda tw: 'created_at' in tw)\
+                .map(self._tweet_process)\
+                .filter(lambda tw: tw != None)\
+                .map(lambda tw: tw['text'].lower() )\
+                .map(self._emoji_preprocess)\
+                .map(self._score)\
+                .map(lambda sc: (1, sc))\
+                .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
+                .collect()
+
+        return tweets
 
 
 if __name__ == '__main__':
     # start spark instance
     sc = SparkContext()
-    data = sc.textFile('data/twitter_dump.txt')
+    data = sc.textFile('data/twitter_dump_small.txt')
     WP = WordPredictor()
-    WP.train(data)
+    WP.fit(data)
+    WP.predict('I think this is a ')
     # I have not preprocess (stem, lematize)
