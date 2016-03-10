@@ -9,6 +9,7 @@ from nltk.stem.wordnet import WordNetLemmatizer
 import numpy as np
 import ssl
 import boto
+from pyspark.mllib.feature import Word2Vec
 
 
 class WordPredictor(object):
@@ -86,7 +87,10 @@ class WordPredictor(object):
         .filter(lambda tw: tw != None)\
         .map(lambda tw: tw['text'].lower() )\
         .map(self._emoji_preprocess)
-        # tweets_tokens = tweets.map(self._emoji_preprocess).collect()
+
+
+        self.tweets = tweets
+        self._build_w2v()
 
         tweets.cache()
 
@@ -135,6 +139,8 @@ class WordPredictor(object):
                 self.quadgram_dict[key][val] = self.quadgram_dict[key][val]/float(total)
 
 
+
+
     def _weighted_ngram(self, key, model, wt):
         """
         redistribute probability by weight
@@ -167,6 +173,13 @@ class WordPredictor(object):
             return stupid_backoff.most_common()[0][0]
         else:
             return u'\U0001f600'
+
+
+    def _build_w2v(self):
+        self.word2vec = Word2Vec()
+        self.word2vec.fit(self.tweets)
+
+
 
     def _score(self, string):
         """
@@ -254,6 +267,9 @@ def get_data(sc):
             temp_data = sc.textFile('s3n://'+access+':'+secret +'@han.'+key.name)
             data = data.union(data)
     return data
+
+
+
 
 if __name__ == '__main__':
     # start spark instance
