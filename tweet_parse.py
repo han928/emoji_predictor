@@ -7,6 +7,8 @@ from collections import Counter, defaultdict
 from nltk.stem.snowball import SnowballStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
 import numpy as np
+import ssl
+import boto
 
 
 class WordPredictor(object):
@@ -42,7 +44,8 @@ class WordPredictor(object):
         tweet = re.sub(',', '', tweet)
         tweet = re.sub('!', '', tweet)
 
-        tweet_tmp = [ self.snowball.stem(wd) for wd in tweet.strip('rt').split() if not wd.startswith('@') and not wd.startswith('http') and not wd.startswith('#') ]
+        tweet_tmp = [ self.snowball.stem(wd) for wd in tweet.strip('rt').split() \
+        if not wd.startswith('@') and not wd.startswith('http') and not wd.startswith('#') ]
 
         if predict:
             tweet_token = ['<s>'] + tweet_tmp
@@ -181,15 +184,25 @@ class WordPredictor(object):
         k = 0
         for seg in nltk.ngrams(proc_str, n):
             k += 1
-            if n==4:
-                quad = seg[:n-1]
-                tri = seg[1:n-1]
-                bi = seg[2:n-1][0]
-                pred = seg[-1]
-            print 'preplexity', perplexity
-            print 'quad', quad, self.w_quad , self.quadgram_dict[quad][pred]
-            print 'tir', tri,  self.w_tri , self.trigram_dict[tri][pred]
-            print 'bi' , bi, self.w_bi ,  self.bigram_dict[bi][pred]
+            if n == 4:
+                quad = seg[:3]
+                tri = seg[1:3]
+                bi = seg[2:3][0]
+            elif n == 3:
+                quad = seg[:3]
+                tri = seg[:2]
+                bi = seg[1:2][0]
+            elif n == 2:
+                quad = seg[:3]
+                tri = seg[:2]
+                bi = seg[0]
+
+            pred = seg[-1]
+            #
+            # print 'preplexity', perplexity
+            # print 'quad', quad, self.w_quad , self.quadgram_dict[quad][pred]
+            # print 'tir', tri,  self.w_tri , self.trigram_dict[tri][pred]
+            # print 'bi' , bi, self.w_bi ,  self.bigram_dict[bi][pred]
 
             perplexity *= (self.w_quad * self.quadgram_dict[quad][pred]\
                             + self.w_tri * self.trigram_dict[tri][pred]\
@@ -207,19 +220,46 @@ class WordPredictor(object):
                 .map(self._tweet_process)\
                 .filter(lambda tw: tw != None)\
                 .map(lambda tw: tw['text'].lower() )\
-                .map(self._emoji_preprocess)\
                 .map(self._score)\
                 .map(lambda sc: (1, sc))\
                 .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
                 .collect()
 
-        return tweets
+        return tweets[0][1]
 
+
+def get_data(sc):
+
+    with open('/home/han/.api_key/awsaccesskey.json') as f:
+        key= json.load(f)
+
+        access= key['access-key']
+        secret = key['secret-access-key']
+
+
+    if hasattr(ssl, '_create_unverified_context'):
+       ssl._create_default_https_context = ssl._create_unverified_context
+
+
+    conn = boto.connect_s3()
+    b = conn.get_bucket('han.tweets.bucket')
+    for i, key in enumerate(b.get_all_keys()):
+        print i ,'s3n://'+access+':'+secret +'@han.'+key.name
+        if i == 0:
+            data = sc.textFile('s3n://'+access+':'+secret +'@han.tweets.bucket/'+key.name)
+        if i == 3:
+            print key
+            break
+        else:
+            temp_data = sc.textFile('s3n://'+access+':'+secret +'@han.'+key.name)
+            data = data.union(data)
+    return data
 
 if __name__ == '__main__':
     # start spark instance
     sc = SparkContext()
-    data = sc.textFile('data/twitter_dump_small.txt')
+    data = get_data(sc)
+    # data = sc.textFile('data/twitter_dump_small.txt')
     WP = WordPredictor()
     WP.fit(data)
     WP.predict('I think this is a ')
