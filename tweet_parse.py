@@ -74,18 +74,20 @@ class WordPredictor(object):
         .map(self._tweet_process)\
         .filter(lambda tw: tw != None)\
         .map(lambda tw: tw['text'].lower() )\
-
+        .map(self._emoji_preprocess)
         # tweets_tokens = tweets.map(self._emoji_preprocess).collect()
 
-        bigram_count = tweets.map(self._emoji_preprocess)\
+        tweets.cache()
+
+        bigram_count = tweets\
                         .flatMap(self._bigrams).map(lambda bg: (bg, 1))\
                         .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
                         .collect()
-        trigram_count = tweets.map(self._emoji_preprocess)\
+        trigram_count = tweets\
                         .flatMap(self._trigrams).map(lambda bg: (bg, 1))\
                         .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
                         .collect()
-        quadgrams_count = tweets.map(self._emoji_preprocess)\
+        quadgrams_count = tweets\
                         .flatMap(self._quadgrams).map(lambda bg: (bg, 1))\
                         .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
                         .collect()
