@@ -11,6 +11,8 @@ import ssl
 import boto
 from pyspark.mllib.feature import Word2Vec
 from parse_json import emoji_list
+from string import punctuation
+
 
 class WordPredictor(object):
 
@@ -47,8 +49,8 @@ class WordPredictor(object):
         tweet = re.sub(',', '', tweet)
         tweet = re.sub('!', '', tweet)
 
-        tweet_tmp = [ self.snowball.stem(wd) for wd in tweet.strip('rt').split() \
-        if not wd.startswith('@') and not wd.startswith('http') and not wd.startswith('#') ]
+        tweet_tmp = [ self.snowball.stem(wd.strip(punctuation)) for wd in tweet.strip('rt').split() \
+        if not wd.startswith('@') and not wd.startswith('http')  ]
 
         if predict:
             tweet_token = ['<s>'] + tweet_tmp
@@ -274,7 +276,7 @@ def get_data(sc):
             print key
             break
         else:
-            temp_data = sc.textFile('s3n://'+access+':'+secret +'@han.'+key.name)
+            temp_data = sc.textFile('s3n://'+access+':'+secret +'@han.tweets.bucket/'+key.name)
             data = data.union(data)
     return data
 
@@ -283,9 +285,9 @@ def get_data(sc):
 
 if __name__ == '__main__':
     # start spark instance
-    # sc = SparkContext()
+    sc = SparkContext()
     # data = get_data(sc)
-    data = sc.textFile('data/twitter_dump.txt')
+    data = sc.textFile('data/twitter_dump_small.txt')
     WP = WordPredictor()
     WP.fit(data)
     WP.predict('I think this is a ')
