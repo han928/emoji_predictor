@@ -94,49 +94,73 @@ class WordPredictor(object):
 
         tweets.cache()
 
-        bigram_count = tweets\
-                        .flatMap(self._bigrams).map(lambda bg: (bg, 1))\
-                        .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
-                        .collect()
-        trigram_count = tweets\
-                        .flatMap(self._trigrams).map(lambda bg: (bg, 1))\
-                        .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
-                        .collect()
-        quadgrams_count = tweets\
-                        .flatMap(self._quadgrams).map(lambda bg: (bg, 1))\
-                        .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
-                        .collect()
+        # bigram_count = tweets\
+        #                 .flatMap(self._bigrams).map(lambda bg: (bg, 1))\
+        #                 .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
+        #                 .collect()
+        # trigram_count = tweets\
+        #                 .flatMap(self._trigrams).map(lambda bg: (bg, 1))\
+        #                 .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
+        #                 .map(lambda ((key, val), cnt): ((str(key), val), cnt))\
+        #                 .collect()
+        # quadgrams_count = tweets\
+        #                 .flatMap(self._quadgrams).map(lambda bg: (bg, 1))\
+        #                 .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
+        #                 .map(lambda ((key, val), cnt): ((str(key), val), cnt))\
+        #                 .collect()
+        #
+        #
+        # self.bigram_dict = defaultdict(Counter)
+        # self.trigram_dict = defaultdict(Counter)
+        # self.quadgram_dict= defaultdict(Counter)
+        #
+        # for ((k, w1) , cnt) in bigram_count:
+        #     self.bigram_dict[k][w1] = cnt
+        #
+        # for ((k, w2), cnt) in trigram_count:
+        #     self.trigram_dict[k][w2] = cnt
+        #
+        # for ((k, w3), cnt) in quadgrams_count:
+        #     self.quadgram_dict[k][w3] = cnt
+        #
+        # # normalizing the Counter
+        # for key in self.bigram_dict:
+        #     total = sum(self.bigram_dict[key].values())
+        #     for val in self.bigram_dict[key]:
+        #         self.bigram_dict[key][val] = self.bigram_dict[key][val]/float(total)
+        #
+        # for key in self.trigram_dict:
+        #     total = sum(self.trigram_dict[key].values())
+        #     for val in self.trigram_dict[key]:
+        #         self.trigram_dict[key][val] = self.trigram_dict[key][val]/float(total)
+        #
+        #
+        # for key in self.quadgram_dict:
+        #     total = sum(self.quadgram_dict[key].values())
+        #     for val in self.quadgram_dict[key]:
+        #         self.quadgram_dict[key][val] = self.quadgram_dict[key][val]/float(total)
+
+        with open('bigram_dict.json', 'r') as f:
+            self.bigram_dict = json.load(f)
+        with open('trigram_dict.json', 'r') as f:
+            self.trigram_dict = json.load(f)
+        with open('quadgram_dict.json', 'r') as f:
+            self.quadgram_dict = json.load(f)
 
 
-        self.bigram_dict = defaultdict(Counter)
-        self.trigram_dict = defaultdict(Counter)
-        self.quadgram_dict= defaultdict(Counter)
-
-        for ((w0, w1) , cnt) in bigram_count:
-            self.bigram_dict[w0][w1] = cnt
-
-        for (((w0, w1), w2), cnt) in trigram_count:
-            self.trigram_dict[(w0, w1)][w2] = cnt
-
-        for (((w0, w1, w2), w3), cnt) in quadgrams_count:
-            self.quadgram_dict[(w0, w1, w2)][w3] = cnt
-
-        # normalizing the Counter
-        for key in self.bigram_dict:
-            total = sum(self.bigram_dict[key].values())
-            for val in self.bigram_dict[key]:
-                self.bigram_dict[key][val] = self.bigram_dict[key][val]/float(total)
-
-        for key in self.trigram_dict:
-            total = sum(self.trigram_dict[key].values())
-            for val in self.trigram_dict[key]:
-                self.trigram_dict[key][val] = self.trigram_dict[key][val]/float(total)
+        self.bigram_dict = defaultdict(Counter, self.bigram_dict)
+        self.trigram_dict = defaultdict(Counter, self.trigram_dict)
+        self.quadgram_dict = defaultdict(Counter, self.quadgram_dict)
 
 
-        for key in self.quadgram_dict:
-            total = sum(self.quadgram_dict[key].values())
-            for val in self.quadgram_dict[key]:
-                self.quadgram_dict[key][val] = self.quadgram_dict[key][val]/float(total)
+        for key, val in self.bigram_dict.iteritems():
+            self.bigram_dict[key] = Counter(val)
+        for key, val in self.trigram_dict.iteritems():
+            self.trigram_dict[key] = Counter(val)
+        for key, val in self.quadgram_dict.iteritems():
+            self.quadgram_dict[key] = Counter(val)
+
+
 
 
         self.tweets = tweets
@@ -147,7 +171,7 @@ class WordPredictor(object):
         """
         redistribute probability by weight
         """
-        copy_mod = model[key].copy()
+        copy_mod = model[str(key)].copy()
 
         for gram in copy_mod:
             copy_mod[gram] = copy_mod[gram]*wt
@@ -167,6 +191,8 @@ class WordPredictor(object):
         w_bi, w_tri, w_quad: weights for bigram, triagram and quadgram model,
                             should add up to one
         """
+        string = unicode(string)
+
         # preprocess the string as you preprocess tweets
         proc_str = self._emoji_preprocess(string, predict=True)
         stupid_backoff = self._backoff_model(proc_str)
@@ -196,7 +222,7 @@ class WordPredictor(object):
         word2vec = Word2Vec()
         self.w2v = word2vec.fit(self.tweets)
 
-
+        
 
     def _score(self, string):
         """
@@ -229,8 +255,8 @@ class WordPredictor(object):
 
             pred = seg[-1]
 
-            perplexity *= (self.w_quad * self.quadgram_dict[quad][pred]\
-                            + self.w_tri * self.trigram_dict[tri][pred]\
+            perplexity *= (self.w_quad * self.quadgram_dict[str(quad)][pred]\
+                            + self.w_tri * self.trigram_dict[str(tri)][pred]\
                                 + self.w_bi * self.bigram_dict[bi][pred])
 
 
