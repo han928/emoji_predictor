@@ -4,21 +4,20 @@ import json
 import re
 import nltk
 from collections import Counter, defaultdict
-from nltk.stem.snowball import SnowballStemmer
-from nltk.stem.wordnet import WordNetLemmatizer
+# from nltk.stem.snowball import SnowballStemmer
+# from nltk.stem.wordnet import WordNetLemmatizer
 import numpy as np
-import ssl
-import boto
 from pyspark.mllib.feature import Word2Vec
 from parse_json import emoji_list
 from string import punctuation
-
+import numpy as np
+from scipy.spatial.distance import cdist
 
 class WordPredictor(object):
 
     def __init__(self):
         # set up stemming agent
-        self.snowball = SnowballStemmer('english')
+        # self.snowball = SnowballStemmer('english')
         # list of emoji
         self.emoji_list = emoji_list()
 
@@ -49,8 +48,8 @@ class WordPredictor(object):
         tweet = re.sub(',', '', tweet)
         tweet = re.sub('!', '', tweet)
 
-        tweet_tmp = [ self.snowball.stem(wd.strip(punctuation)) for wd in tweet.strip('rt').split() \
-        if not wd.startswith('@') and not wd.startswith('http')  ]
+        tweet_tmp = [ wd.strip(punctuation) for wd in tweet.split() \
+        if not wd.startswith('@') and not wd.startswith('http') and not wd == 'rt'  ]
 
         if predict:
             tweet_token = ['<s>'] + tweet_tmp
@@ -73,7 +72,7 @@ class WordPredictor(object):
 
 
 
-    def fit(self, data, w_bi=1./6, w_tri=1./3, w_quad=1./2):
+    def fit(self, data=None, w_bi=1./6, w_tri=1./3, w_quad=1./2, train = False):
         """
         data: sc.textFile() object
         TODO:  save bigram, trigram, quagram dict to pickle
@@ -84,87 +83,91 @@ class WordPredictor(object):
         self.w_tri = w_tri
         self.w_quad = w_quad
 
-        tweets =  data\
-        .filter(lambda tw: len(tw)>1)\
-        .filter(lambda tw: 'created_at' in tw)\
-        .map(self._tweet_process)\
-        .filter(lambda tw: tw != None)\
-        .map(lambda tw: tw['text'].lower() )\
-        .map(self._emoji_preprocess)
 
-        tweets.cache()
+        if train:
+            tweets =  data\
+            .filter(lambda tw: len(tw)>1)\
+            .filter(lambda tw: 'created_at' in tw)\
+            .map(self._tweet_process)\
+            .filter(lambda tw: tw != None)\
+            .map(lambda tw: tw['text'].lower() )\
+            .map(self._emoji_preprocess)
 
-        # bigram_count = tweets\
-        #                 .flatMap(self._bigrams).map(lambda bg: (bg, 1))\
-        #                 .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
-        #                 .collect()
-        # trigram_count = tweets\
-        #                 .flatMap(self._trigrams).map(lambda bg: (bg, 1))\
-        #                 .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
-        #                 .map(lambda ((key, val), cnt): ((str(key), val), cnt))\
-        #                 .collect()
-        # quadgrams_count = tweets\
-        #                 .flatMap(self._quadgrams).map(lambda bg: (bg, 1))\
-        #                 .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
-        #                 .map(lambda ((key, val), cnt): ((str(key), val), cnt))\
-        #                 .collect()
-        #
-        #
-        # self.bigram_dict = defaultdict(Counter)
-        # self.trigram_dict = defaultdict(Counter)
-        # self.quadgram_dict= defaultdict(Counter)
-        #
-        # for ((k, w1) , cnt) in bigram_count:
-        #     self.bigram_dict[k][w1] = cnt
-        #
-        # for ((k, w2), cnt) in trigram_count:
-        #     self.trigram_dict[k][w2] = cnt
-        #
-        # for ((k, w3), cnt) in quadgrams_count:
-        #     self.quadgram_dict[k][w3] = cnt
-        #
-        # # normalizing the Counter
-        # for key in self.bigram_dict:
-        #     total = sum(self.bigram_dict[key].values())
-        #     for val in self.bigram_dict[key]:
-        #         self.bigram_dict[key][val] = self.bigram_dict[key][val]/float(total)
-        #
-        # for key in self.trigram_dict:
-        #     total = sum(self.trigram_dict[key].values())
-        #     for val in self.trigram_dict[key]:
-        #         self.trigram_dict[key][val] = self.trigram_dict[key][val]/float(total)
-        #
-        #
-        # for key in self.quadgram_dict:
-        #     total = sum(self.quadgram_dict[key].values())
-        #     for val in self.quadgram_dict[key]:
-        #         self.quadgram_dict[key][val] = self.quadgram_dict[key][val]/float(total)
+            tweets.cache()
 
-        with open('bigram_dict.json', 'r') as f:
-            self.bigram_dict = json.load(f)
-        with open('trigram_dict.json', 'r') as f:
-            self.trigram_dict = json.load(f)
-        with open('quadgram_dict.json', 'r') as f:
-            self.quadgram_dict = json.load(f)
+            bigram_count = tweets\
+                            .flatMap(self._bigrams).map(lambda bg: (bg, 1))\
+                            .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
+                            .collect()
+            trigram_count = tweets\
+                            .flatMap(self._trigrams).map(lambda bg: (bg, 1))\
+                            .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
+                            .map(lambda ((key, val), cnt): ((str(key), val), cnt))\
+                            .collect()
+            quadgrams_count = tweets\
+                            .flatMap(self._quadgrams).map(lambda bg: (bg, 1))\
+                            .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
+                            .map(lambda ((key, val), cnt): ((str(key), val), cnt))\
+                            .collect()
 
 
-        self.bigram_dict = defaultdict(Counter, self.bigram_dict)
-        self.trigram_dict = defaultdict(Counter, self.trigram_dict)
-        self.quadgram_dict = defaultdict(Counter, self.quadgram_dict)
+            self.bigram_dict = defaultdict(Counter)
+            self.trigram_dict = defaultdict(Counter)
+            self.quadgram_dict= defaultdict(Counter)
+
+            for ((k, w1) , cnt) in bigram_count:
+                self.bigram_dict[k][w1] = cnt
+
+            for ((k, w2), cnt) in trigram_count:
+                self.trigram_dict[k][w2] = cnt
+
+            for ((k, w3), cnt) in quadgrams_count:
+                self.quadgram_dict[k][w3] = cnt
+
+            # normalizing the Counter
+            for key in self.bigram_dict:
+                total = sum(self.bigram_dict[key].values())
+                for val in self.bigram_dict[key]:
+                    self.bigram_dict[key][val] = self.bigram_dict[key][val]/float(total)
+
+            for key in self.trigram_dict:
+                total = sum(self.trigram_dict[key].values())
+                for val in self.trigram_dict[key]:
+                    self.trigram_dict[key][val] = self.trigram_dict[key][val]/float(total)
 
 
-        for key, val in self.bigram_dict.iteritems():
-            self.bigram_dict[key] = Counter(val)
-        for key, val in self.trigram_dict.iteritems():
-            self.trigram_dict[key] = Counter(val)
-        for key, val in self.quadgram_dict.iteritems():
-            self.quadgram_dict[key] = Counter(val)
+            for key in self.quadgram_dict:
+                total = sum(self.quadgram_dict[key].values())
+                for val in self.quadgram_dict[key]:
+                    self.quadgram_dict[key][val] = self.quadgram_dict[key][val]/float(total)
 
 
+            self.tweets = tweets
+            self._build_w2v()
+
+        else:
+            with open('data/bigram_dict.json', 'r') as f:
+                self.bigram_dict = json.load(f)
+            with open('data/trigram_dict.json', 'r') as f:
+                self.trigram_dict = json.load(f)
+            with open('data/quadgram_dict.json', 'r') as f:
+                self.quadgram_dict = json.load(f)
 
 
-        self.tweets = tweets
-        self._build_w2v()
+            self.bigram_dict = defaultdict(Counter, self.bigram_dict)
+            self.trigram_dict = defaultdict(Counter, self.trigram_dict)
+            self.quadgram_dict = defaultdict(Counter, self.quadgram_dict)
+
+
+            for key, val in self.bigram_dict.iteritems():
+                self.bigram_dict[key] = Counter(val)
+            for key, val in self.trigram_dict.iteritems():
+                self.trigram_dict[key] = Counter(val)
+            for key, val in self.quadgram_dict.iteritems():
+                self.quadgram_dict[key] = Counter(val)
+
+            self.w2v_idx = np.load('wd_idx.npy')
+            self.w2v_vect = np.load('wd_vect.npy')
 
 
     def _weighted_ngram(self, key, model, wt):
@@ -199,20 +202,20 @@ class WordPredictor(object):
 
         if len(stupid_backoff) != 0 and stupid_backoff != '<s>':
             output = self._word_to_emoji(stupid_backoff.most_common()[0][0])
-            print output
-            return  output, zip(*stupid_backoff.most_common())[0][:5]
+            # print 'output', output
+            print   'Predictions:', output, ' | ', zip(*stupid_backoff.most_common())[0][:5]
         else:
-            print 'not found', u'\U0001f600'
-            return u'\U0001f600'
+            print self._word_to_emoji(proc_str[-1])
 
 
     def _word_to_emoji(self, wd):
         try:
-            for w, score in self.w2v.findSynonyms(wd, 99999): # 99999 for everything
-                if w in self.emoji_list:
-                    return w
-            print 'nothing found'
-            return u'\U0001f600'
+            return self._similar_word(wd)
+            # for w, score in self.w2v.findSynonyms(wd, 99999): # 99999 for everything
+            #     if w in self.emoji_list:
+            #         return w
+            # print 'nothing found'
+            # return u'\U0001f600'
         except:
             print 'exception error'
             return u'\U0001f600'
@@ -222,7 +225,19 @@ class WordPredictor(object):
         word2vec = Word2Vec()
         self.w2v = word2vec.fit(self.tweets)
 
-        
+    def _similar_word(self, wd):
+        wd_vect = self.w2v_vect[self.w2v_idx == wd]
+        sim_word = self.w2v_idx[cdist(wd_vect, self.w2v_vect, 'cosine').argsort().flatten()]
+        if not wd_vect.any():
+            print 'not such word in w2v'
+            return u'\U0001f600'
+        else:
+            for w in sim_word:
+                if w in self.emoji_list:
+                    return w
+
+
+
 
     def _score(self, string):
         """
@@ -279,42 +294,15 @@ class WordPredictor(object):
         return tweets[0][1]
 
 
-def get_data(sc):
-
-    with open('/home/han/.api_key/awsaccesskey.json') as f:
-        key= json.load(f)
-
-        access= key['access-key']
-        secret = key['secret-access-key']
-
-
-    if hasattr(ssl, '_create_unverified_context'):
-       ssl._create_default_https_context = ssl._create_unverified_context
-
-
-    conn = boto.connect_s3()
-    b = conn.get_bucket('han.tweets.bucket')
-    for i, key in enumerate(b.get_all_keys()):
-        print i ,'s3n://'+access+':'+secret +'@han.'+key.name
-        if i == 0:
-            data = sc.textFile('s3n://'+access+':'+secret +'@han.tweets.bucket/'+key.name)
-        if i == 3:
-            print key
-            break
-        else:
-            temp_data = sc.textFile('s3n://'+access+':'+secret +'@han.tweets.bucket/'+key.name)
-            data = data.union(data)
-    return data
-
 
 
 
 if __name__ == '__main__':
     # start spark instance
     sc = SparkContext()
-    # data = get_data(sc)
-    data = sc.textFile('data/twitter_dump_small.txt')
+    data = sc.textFile('data/twitter_dump.txt')
     WP = WordPredictor()
+    # WP.fit()
     WP.fit(data)
     WP.predict('I think this is a ')
     # I have not preprocess (stem, lematize)
