@@ -146,6 +146,7 @@ class WordPredictor(object):
             self._build_w2v()
 
         else:
+
             with open('data/bigram_dict.json', 'r') as f:
                 self.bigram_dict = json.load(f)
             with open('data/trigram_dict.json', 'r') as f:
@@ -165,6 +166,7 @@ class WordPredictor(object):
                 self.trigram_dict[key] = Counter(val)
             for key, val in self.quadgram_dict.iteritems():
                 self.quadgram_dict[key] = Counter(val)
+
 
             self.w2v_idx = np.load('wd_idx.npy')
             self.w2v_vect = np.load('wd_vect.npy')
@@ -304,5 +306,5 @@ if __name__ == '__main__':
     WP = WordPredictor()
     # WP.fit()
     WP.fit(data)
-    WP.predict('I think this is a ')
+    # WP.predict('I think this is a ')
     # I have not preprocess (stem, lematize)
