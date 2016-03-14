@@ -212,7 +212,8 @@ class WordPredictor(object):
         if len(stupid_backoff) != 0 and stupid_backoff != '<s>':
             output = self._word_to_emoji(stupid_backoff.most_common()[0][0])
             # print 'output', output
-            print   'Predictions:', output, ' | ', zip(*stupid_backoff.most_common())[0][:5]
+            print   'Predictions:', output, ' | ', "|".join(zip(*stupid_backoff.most_common())[0][:5])
+            return output+ ' | ' +"|".join(zip(*stupid_backoff.most_common())[0][:5])
         else:
             print self._word_to_emoji(proc_str[-1])
 

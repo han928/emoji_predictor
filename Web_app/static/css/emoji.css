@@ -1,0 +1,56 @@
+@media (min-width: 768px) {
+  .navbar-nav > li {
+    float: left;
+    font-size: 30px;
+  }
+}
+body{
+
+    background-color: #E6E6E6
+
+}
+header{
+
+    background: #67BDF7
+}
+
+hr.star-light:after{
+
+    background-color: #67BDF7
+}
+
+section.success{
+    color: #fff;
+
+    background: #67BDF7
+
+}
+
+
+a, a:hover, a:focus, a:active, a.active {
+    outline: 0;
+    color: #67BDF7;
+}
+footer .footer-above {
+    padding-top: 50px;
+    background-color: #434F5A;
+}
+footer .footer-below {
+    padding: 25px 0;
+    background-color: #434F5A;
+}
+
+.navbar-default {
+    background-color: #434F5A;
+}
+section h2 {
+    margin: 0;
+    font-size: 2.5em;
+}
+.form-control{
+
+    width:85%;
+}
+header .intro-text .skills {
+    color: #047B64;
+}
