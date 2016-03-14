@@ -183,6 +183,13 @@ class WordPredictor(object):
         return copy_mod
 
 
+    def set_params(self, w_bi, w_tri, w_quad):
+        # set weight for n_gram models, they should add up to one
+        self.w_bi = w_bi
+        self.w_tri = w_tri
+        self.w_quad = w_quad
+
+
     def _backoff_model(self, proc_str):
         bigram_mod = self._weighted_ngram(proc_str[-1:][0], self.bigram_dict, self.w_bi)
         trigram_mod = self._weighted_ngram(tuple(proc_str[-2:]), self.trigram_dict, self.w_tri)
@@ -241,11 +248,11 @@ class WordPredictor(object):
 
 
 
-    def _score(self, string):
+    def _score(self, proc_str):
         """
         calculate the perplexity score for a single string
         """
-        proc_str = self._emoji_preprocess(string)
+        # proc_str = self._emoji_preprocess(string)
 
         perplexity = 1.0
 
@@ -288,12 +295,15 @@ class WordPredictor(object):
                 .map(self._tweet_process)\
                 .filter(lambda tw: tw != None)\
                 .map(lambda tw: tw['text'].lower() )\
-                .map(self._score)\
-                .map(lambda sc: (1, sc))\
-                .reduceByKey(lambda cnt1, cnt2: cnt1+cnt2)\
-                .collect()
+                .map(self._emoji_preprocess).collect()
 
-        return tweets[0][1]
+        score = 0
+        for tw in tweets:
+            score += self._score(tw)
+
+
+
+        return score
 
 
 
@@ -301,10 +311,13 @@ class WordPredictor(object):
 
 if __name__ == '__main__':
     # start spark instance
-    sc = SparkContext()
-    data = sc.textFile('data/twitter_dump.txt')
+    # sc = SparkContext()
+    # data = sc.textFile('data/twitter_dump.txt')
     WP = WordPredictor()
-    # WP.fit()
-    WP.fit(data)
-    # WP.predict('I think this is a ')
-    # I have not preprocess (stem, lematize)
+    WP.fit()
+    # WP.fit(data)
+    WP.predict('I think this is a ')
+
+
+
+        # tweets =  test.filter(lambda tw: len(tw)>1).filter(lambda tw: 'created_at' in tw).map(WP._tweet_process).filter(lambda tw: tw != None).map(lambda tw: tw['text'].lower() ).map(WP._emoji_preprocess)
