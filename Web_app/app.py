@@ -30,7 +30,7 @@ def predict():
     prediction = WP.predict(text)
 
     # print 'prediction type:' ,type(prediction)
-    return render_template('index.html', preceding_wd = text ,prediction = prediction, section = "#prediction")
+    return render_template('index.html', preceding_wd = text ,prediction = prediction, section = "prediction")
 
 
 if __name__ == '__main__':

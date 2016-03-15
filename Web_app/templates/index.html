@@ -34,13 +34,7 @@
 
 
 <body id="page-top" class="index">
-    {% if section %}
-    <script>
-        $(function() {
-           $("html, body").scrollTop( $("#{{ section }}").offset().top );
-        });
-    </script>
-    {% endif %}
+
 
     <!-- Navigation -->
     <nav class="navbar navbar-default navbar-fixed-top">
@@ -110,8 +104,14 @@
                 <br>
 
                 {% if prediction %}
+                    <h3 class='section-heading'>You enters: {{ preceding_wd }} </h3>
                 <br>
                     <h3 class='section-heading'>Predictions: {{ prediction }} !</h3>
+                {% else %}
+                <h3 class='section-heading'>You enters:                      </h3>
+            <br>
+                <h3 class='section-heading'>Predictions:                      </h3>
+
                 {% endif %}
             </form>
         </div>
@@ -448,3 +448,10 @@
 </body>
 
 </html>
+{% if section %}
+<script>
+    $(function() {
+       $("html, body").scrollTop( $("#{{ section }}").offset().top );
+    });
+</script>
+{% endif %}
