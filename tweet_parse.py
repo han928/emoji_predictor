@@ -12,6 +12,7 @@ from parse_json import emoji_list
 from string import punctuation
 import numpy as np
 from scipy.spatial.distance import cdist
+import random
 
 class WordPredictor(object):
 
@@ -204,49 +205,75 @@ class WordPredictor(object):
                             should add up to one
         """
         string = unicode(string)
-
+        NUM_EMOJI_OUTPUT = 5
         # preprocess the string as you preprocess tweets
         proc_str = self._emoji_preprocess(string, predict=True)
         stupid_backoff = self._backoff_model(proc_str)
 
         if len(stupid_backoff) != 0 and stupid_backoff != '<s>':
-            output = self._word_to_emoji(stupid_backoff.most_common()[0][0])
             emojis = []
-
+            words = []
+            additional_emoji = []
+            # find the top 5 emojis in the top frequencies
             for word in zip(*stupid_backoff.most_common())[0]:
                 if word in self.emoji_list:
                     emojis.append(word)
-            # print 'output', output
-            print   'Predictions:', output+' | '+" | ".join(emojis[:5])+' | '+ " | ".join(zip(*stupid_backoff.most_common())[0][:5])
-            return output+ ' | ' +" | ".join(emojis[:5])+" | "+" | ".join(zip(*stupid_backoff.most_common())[0][:5])
+                else:
+                    words.append(word)
+
+
+            if len(emojis) < NUM_EMOJI_OUTPUT:
+                additional_emoji = self._word_to_emoji(words[0], proc_str,NUM_EMOJI_OUTPUT - len(emojis))
+
+            emojis += additional_emoji
+            print   'Predictions:'," | ".join(emojis[:5]) +' | '+ " | ".join(words[:5])
+            return " | ".join(emojis[:5]) +' | '+ " | ".join(words[:5])
         else:
-            print self._word_to_emoji(proc_str[-1])
+            print "no word in backoff"
+            print "prediction with no word in backoff",self._word_to_emoji(proc_str[-1],  proc_str[:-1], 5)
+            return " | ".join([self._word_to_emoji(proc_str[-1],  proc_str[:-1], 5)] + random.sample(self.emoji_list, 4))
 
+    def _word_to_emoji(self, wd, proc_str, n=1):
+        # try:
+        #     return self._similar_word(wd)
+        # except:
+        #     print 'exception error'
+        #     return u'\U0001f600'
 
-    def _word_to_emoji(self, wd):
-        try:
-            return self._similar_word(wd)
-        except:
-            print 'exception error'
-            return u'\U0001f600'
+        wd_vect = self.w2v_vect[self.w2v_idx == wd]
+        sim_word = self.w2v_idx[cdist(wd_vect, self.w2v_vect, 'cosine').argsort().flatten()]
+        if not wd_vect.any():
+            wd = proc_str[-1]
+            print "no word in w2v ", wd
 
+            return self._word_to_emoji(wd, proc_str[:-1], n)
+        else:
+            emojis = []
+            for w in sim_word:
+                if w in self.emoji_list:
+                    emojis.append(w)
+                if len(emojis) == n:
+                    return w
 
     def _build_w2v(self):
         word2vec = Word2Vec()
         self.w2v = word2vec.fit(self.tweets)
 
-    def _similar_word(self, wd):
-        wd_vect = self.w2v_vect[self.w2v_idx == wd]
-        sim_word = self.w2v_idx[cdist(wd_vect, self.w2v_vect, 'cosine').argsort().flatten()]
-        if not wd_vect.any():
-            print 'not such word in w2v'
-            return u'\U0001f600'
-        else:
-            for w in sim_word:
-                if w in self.emoji_list:
-                    return w
-
-
+    # def _similar_word(self, wd, n=1):
+    #     wd_vect = self.w2v_vect[self.w2v_idx == wd]
+    #     sim_word = self.w2v_idx[cdist(wd_vect, self.w2v_vect, 'cosine').argsort().flatten()]
+    #     if not wd_vect.any():
+    #         print 'not such word in w2v'
+    #         return u'\U0001f600'
+    #     else:
+    #         emojis = []
+    #         for w in sim_word:
+    #             if w in self.emoji_list:
+    #                 emojis.append(w)
+    #             if len(emojis) == n:
+    #                 return w
+    #
+    #
 
 
     def _score(self, proc_str):
