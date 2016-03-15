@@ -32,7 +32,15 @@
 
 </head>
 
+
 <body id="page-top" class="index">
+    {% if section %}
+    <script>
+        $(function() {
+           $("html, body").scrollTop( $("#{{ section }}").offset().top );
+        });
+    </script>
+    {% endif %}
 
     <!-- Navigation -->
     <nav class="navbar navbar-default navbar-fixed-top">
@@ -157,7 +165,7 @@
                 <div class="row">
                     <div class="footer-col col-md-4">
                         <h3>Location</h3>
-                        <p>San Francisco Bay <area shape="default" coords="" href="#" /></p>
+                        <p>San Francisco Bay Area<area shape="default" coords="" href="#" /></p>
                     </div>
                     <div class="footer-col col-md-4">
                         <h3>Around the Web</h3>
@@ -181,7 +189,7 @@
             <div class="container">
                 <div class="row">
                     <div class="col-lg-12">
-                         Emoji Predictor Han Lai
+                         Emoji Predictor | Han Lai | 2016
                     </div>
                 </div>
             </div>

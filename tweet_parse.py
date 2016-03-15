@@ -211,9 +211,14 @@ class WordPredictor(object):
 
         if len(stupid_backoff) != 0 and stupid_backoff != '<s>':
             output = self._word_to_emoji(stupid_backoff.most_common()[0][0])
+            emojis = []
+
+            for word in zip(*stupid_backoff.most_common())[0]:
+                if word in self.emoji_list:
+                    emojis.append(word)
             # print 'output', output
-            print   'Predictions:', output, ' | ', "|".join(zip(*stupid_backoff.most_common())[0][:5])
-            return output+ ' | ' +"|".join(zip(*stupid_backoff.most_common())[0][:5])
+            print   'Predictions:', output+' | '+" | ".join(emojis[:5])+' | '+ " | ".join(zip(*stupid_backoff.most_common())[0][:5])
+            return output+ ' | ' +" | ".join(emojis[:5])+" | "+" | ".join(zip(*stupid_backoff.most_common())[0][:5])
         else:
             print self._word_to_emoji(proc_str[-1])
 
@@ -221,11 +226,6 @@ class WordPredictor(object):
     def _word_to_emoji(self, wd):
         try:
             return self._similar_word(wd)
-            # for w, score in self.w2v.findSynonyms(wd, 99999): # 99999 for everything
-            #     if w in self.emoji_list:
-            #         return w
-            # print 'nothing found'
-            # return u'\U0001f600'
         except:
             print 'exception error'
             return u'\U0001f600'
@@ -318,7 +318,3 @@ if __name__ == '__main__':
     WP.fit()
     # WP.fit(data)
     WP.predict('I think this is a ')
-
-
-
-        # tweets =  test.filter(lambda tw: len(tw)>1).filter(lambda tw: 'created_at' in tw).map(WP._tweet_process).filter(lambda tw: tw != None).map(lambda tw: tw['text'].lower() ).map(WP._emoji_preprocess)

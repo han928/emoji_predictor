@@ -52,4 +52,4 @@ if __name__ == '__main__':
     getting_firehose()
 
 
-    # execute with python ../twitter_scrape.py >> twitter_dump.txt
+    # execute with python ../twitter_scrape.py >> twitter_dump.text
