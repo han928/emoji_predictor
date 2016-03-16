@@ -1,18 +1,17 @@
 from __future__ import division
 from pyspark import SparkContext
-import json
-import re
-import nltk
 from collections import Counter, defaultdict
-# from nltk.stem.snowball import SnowballStemmer
-# from nltk.stem.wordnet import WordNetLemmatizer
-import numpy as np
+from scipy.spatial.distance import cdist
 from pyspark.mllib.feature import Word2Vec
 from parse_json import emoji_list
 from string import punctuation
+import cPickle as pickle
 import numpy as np
-from scipy.spatial.distance import cdist
+import numpy as np
 import random
+import json
+import re
+import nltk
 
 class WordPredictor(object):
 
@@ -88,7 +87,7 @@ class WordPredictor(object):
 
 
 
-    def fit(self, data=None, w_bi=1./6, w_tri=1./3, w_quad=1./2, train = False):
+    def fit(self, data=None, w_bi=1./5, w_tri=1./5, w_quad=3./5, w_emoji = 1./5, train = False):
         """
         data: sc.textFile() object
         TODO:  save bigram, trigram, quagram dict to pickle
@@ -98,7 +97,7 @@ class WordPredictor(object):
         self.w_bi = w_bi
         self.w_tri = w_tri
         self.w_quad = w_quad
-
+        self.w_emoji = w_emoji
 
         if train:
             tweets =  data\
@@ -163,11 +162,11 @@ class WordPredictor(object):
 
         else:
 
-            with open('data/bigram_dict.json', 'r') as f:
+            with open('model/bigram_dict.json', 'r') as f:
                 self.bigram_dict = json.load(f)
-            with open('data/trigram_dict.json', 'r') as f:
+            with open('model/trigram_dict.json', 'r') as f:
                 self.trigram_dict = json.load(f)
-            with open('data/quadgram_dict.json', 'r') as f:
+            with open('model/quadgram_dict.json', 'r') as f:
                 self.quadgram_dict = json.load(f)
 
 
@@ -184,8 +183,16 @@ class WordPredictor(object):
                 self.quadgram_dict[key] = Counter(val)
 
 
-            self.w2v_idx = np.load('wd_idx.npy')
-            self.w2v_vect = np.load('wd_vect.npy')
+            self.w2v_idx = np.load('model/wd_idx.npy')
+            self.w2v_vect = np.load('model/wd_vect.npy')
+
+
+            with open('model/NB.pkl', 'r') as f:
+                self.NB = pickle.load(f)
+            with open('model/Tfidf.pkl', 'r') as f:
+                self.Tfidf = pickle.load(f)
+            with open('model/senti_condFreq.pkl') as f:
+                self.senti_condFreq = pickle.load(f)
 
 
     def _weighted_ngram(self, key, model, wt):
@@ -198,26 +205,60 @@ class WordPredictor(object):
             copy_mod[gram] = copy_mod[gram]*wt
         return copy_mod
 
+    def _weighted_senti_confreq(self, key, model, wt):
+        """
+        redistribute probability by weight
+        """
+        copy_mod = model[key].copy()
 
-    def set_params(self, w_bi, w_tri, w_quad):
+        for gram in copy_mod:
+            copy_mod[gram] = copy_mod[gram]*wt
+        return copy_mod
+
+    def _sentiment(self, string):
+        tfidf = self.Tfidf.transform([string])
+        prob = self.NB.predict_proba(tfidf)[:,1][0]
+
+        if prob < 0.25:
+            sen = 1.
+        elif prob < 0.5 and prob >=0.25:
+            sen = 2.
+        elif prob < 0.75 and prob >=0.5:
+            sen = 3.
+        else:
+            sen = 4.
+
+        return sen
+
+
+
+
+    def set_params(self, w_bi, w_tri, w_quad, w_emoji):
         """
         set weight for n_gram models, they should add up to one
         """
         self.w_bi = w_bi
         self.w_tri = w_tri
         self.w_quad = w_quad
+        self.w_emoji = w_emoji
 
-
-    def _backoff_model(self, proc_str):
+    def _interpolation_model(self, proc_str, string, senti):
         """
         calculating the probability of all word frequencies from previous n_grams
         """
         bigram_mod = self._weighted_ngram(proc_str[-1:][0], self.bigram_dict, self.w_bi)
         trigram_mod = self._weighted_ngram(tuple(proc_str[-2:]), self.trigram_dict, self.w_tri)
         quadgram_mod = self._weighted_ngram(tuple(proc_str[-3:]), self.quadgram_dict, self.w_quad)
-        return bigram_mod + trigram_mod + quadgram_mod
+        if senti:
+            sentiment_mod = self._weighted_senti_confreq(self._sentiment(string), self.senti_condFreq, self.w_emoji)
 
-    def predict(self, string):
+            return bigram_mod + trigram_mod + quadgram_mod + sentiment_mod
+        else:
+            return bigram_mod + trigram_mod + quadgram_mod
+
+
+
+    def predict(self, string , senti = True):
         """
         Perform model prediction
         string: raw string input
@@ -228,30 +269,33 @@ class WordPredictor(object):
         NUM_EMOJI_OUTPUT = 5
         # preprocess the string as you preprocess tweets
         proc_str = self._emoji_preprocess(string, predict=True)
-        stupid_backoff = self._backoff_model(proc_str)
+        SLM = self._interpolation_model(proc_str, string, senti)   # SLM means imple linear interpolation
 
-        if len(stupid_backoff) != 0 and stupid_backoff != '<s>':
+        if len(SLM) != 0 and SLM != '<s>':
             emojis = []
             words = []
             additional_emoji = []
             # find the top 5 emojis in the top frequencies
-            for word in zip(*stupid_backoff.most_common())[0]:
+            for word in zip(*SLM.most_common())[0]:
                 if word in self.emoji_list:
                     emojis.append(word)
                 else:
                     words.append(word)
 
 
-            if len(emojis) < NU_EMOJI_OUTPUT:
+            if len(emojis) < NUM_EMOJI_OUTPUT:
                 additional_emoji = self._word_to_emoji(words[0], proc_str,NUM_EMOJI_OUTPUT - len(emojis))
 
             emojis += additional_emoji
             print   'Predictions:'," | ".join(emojis[:5]) +' | '+ " | ".join(words[:5])
             return " | ".join(emojis[:5]) +' | '+ " | ".join(words[:5])
         else:
-            print "no word in backoff"
-            print "prediction with no word in backoff",self._word_to_emoji(proc_str[-1],  proc_str[:-1], 5)
+            print "no word in interpolation"
+            print "prediction with no word in interpolation",self._word_to_emoji(proc_str[-1],  proc_str[:-1], 5)
             return " | ".join([self._word_to_emoji(proc_str[-1],  proc_str[:-1], 5)] + random.sample(self.emoji_list, 4))
+
+
+
 
     def _word_to_emoji(self, wd, proc_str, n=1):
         """
