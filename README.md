@@ -24,20 +24,21 @@ In this project, I use a n_gram language model to predict the next words and ext
 
 ## Data Analysis:
 1. Usage of Emojis on twitter: Here are the discovery for the top 10 usage for emojis on twitter
-![Emoji Counts](https://github.com/han928/emoji_predictor/tree/master/image/Emoji_count.png "Emoji Counts")
+![Emoji Counts](image/Emoji_count.png "Emoji Counts")
 It's worth noting that the LOL face with tears has more than double the count of all the other emojis.
 I than look at the emoji usage under different sentiments.
 
-    ![Extremly_positive](https://github.com/han928/emoji_predictor/tree/master/image/Extremly_positive.png "extremly_positive")
-    ![Extremly_Negative](https://github.com/han928/emoji_predictor/tree/master/image/Extremly_negative.png "Extremly_Negative")
+    ![Extremly_positive](image/extremely_positive.png "extremly_positive")
 
-    ![mildly_positive](https://github.com/han928/emoji_predictor/tree/master/image/mildly_positive.png "midly_positive")
-    ![mildly_negative](https://github.com/han928/emoji_predictor/tree/master/image/mildly_negative.png "mildly_negative")
+    ![Extremly_Negative](image/Extremly_negative.png "Extremly_Negative")
+
+    ![mildly_positive](image/mildly_positive.png "midly_positive")
+    ![mildly_negative](image/mildly_negative.png "mildly_negative")
 
     The result shows that  no matter the sentiment, the LOL face with tears are always on top of the usage list.
 
 2. Word2Vec Model: the Word2Vect has been a extremely useful tool for featurization for text. The following plot visually inspect the result of the Word2Vec model based on my tweet corpus.
 
-    ![emoji space](https://github.com/han928/emoji_predictor/tree/master/image/emoji_space.png "emoji space")
+    ![emoji space](image/emoji_space.png "emoji space")
 
     The result shows that the emoji were correctly classified based on , negative emotions, positive emotions, objects, hearts...etc. One should notcie that the lol negative face is incorrectly clustered into the negative emotions group due to the broad usage of this emoji.
