@@ -17,7 +17,7 @@ In this project, I use a n_gram language model to predict the next words and ext
 
 4. Word2Vec: word2vec model is trained with Spark MLLib library and the vectors for different words and emojis were used to assist prediction in the case of no emoji following the preceding word combinations.
 
-5. Sentiment Analysis: a naive bayes model were trained on sentiment analysis corpus (obtained through [Sentiment140](http://help.sentiment140.com/for-students/))based on tweets. The tweet sentiment were then divided into four categories (extremely positive, mildly positive, mildly negative, extremely negative) based on it's probability of being a positve tweets. The conditional probability of different sentiment were than calculated for each emoji and add into the interpolation model to assist prediction.
+5. Sentiment Analysis: a naive bayes model were trained on sentiment analysis corpus (obtained through [Sentiment140](http://help.sentiment140.com/for-students/)) based on tweets. The tweet sentiment were then divided into four categories (extremely positive, mildly positive, mildly negative, extremely negative) based on it's probability of being a positve tweets. The conditional probability of different sentiment were than calculated for each emoji and add into the interpolation model to assist prediction.
 
 
 
@@ -36,6 +36,25 @@ I than look at the emoji usage under different sentiments.
     ![mildly_negative](image/mildly_negative.png "mildly_negative")
 
     The result shows that  no matter the sentiment, the LOL face with tears are always on top of the usage list.
+    some tweets that's extremely negative with lol face
+
+    * i hate you 😂💀
+    * it's sad how true this is 😂
+    * this is literally me its so sad 😂😂😂😂😂
+
+    and tweets that's extremely positive
+
+    * yeah your welcome lol😂
+    * this is great haha 💀😂
+    * lmao disney was great👌😂😂
+
+    According to emojipedia
+
+        >A laughing emoji which at small sizes is often mistaken for being tears of sadness. This emoji is laughing so much that it is crying tears of joy.
+
+    which could be the reason of this
+
+
 
 2. Word2Vec Model: the Word2Vect has been a extremely useful tool for featurization for text. The following plot visually inspect the result of the Word2Vec model based on my tweet corpus.
 

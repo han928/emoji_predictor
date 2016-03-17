@@ -258,7 +258,7 @@ class WordPredictor(object):
 
 
 
-    def predict(self, string , senti = True):
+    def predict(self, string , senti = False):
         """
         Perform model prediction
         string: raw string input
@@ -270,6 +270,16 @@ class WordPredictor(object):
         # preprocess the string as you preprocess tweets
         proc_str = self._emoji_preprocess(string, predict=True)
         SLM = self._interpolation_model(proc_str, string, senti)   # SLM means imple linear interpolation
+        emoji_senti_ls = zip(*self.senti_condFreq[self._sentiment(string)].most_common())[0] # get emoji recommendation for sentiment
+
+        emoji_senti =[]
+
+        for emoji in emoji_senti_ls:
+            if emoji not in self.emoji_modifier:
+                emoji_senti.append(emoji)
+            if len(emoji_senti)>=5:
+                break
+
 
         if len(SLM) != 0 and SLM != '<s>':
             emojis = []
@@ -289,12 +299,15 @@ class WordPredictor(object):
                 additional_emoji = self._word_to_emoji(words[0], proc_str,NUM_EMOJI_OUTPUT - len(emojis))
 
             emojis += additional_emoji
-            print   'Predictions:'," | ".join(emojis[:5]) +' | '+ " | ".join(words[:5])
-            return " | ".join(emojis[:5]) +' | '+ " | ".join(words[:5])
+
+
+            print   'Predictions:'," | ".join(emojis[:5]) +' | '+ " | ".join(emoji_senti[:5])
+            return " | ".join(emojis[:5]) +' | '+ " | ".join(emoji_senti[:5])
         else:
             print "no word in interpolation"
             print "prediction with no word in interpolation",self._word_to_emoji(proc_str[-1],  proc_str[:-1], 5)
-            return " | ".join([self._word_to_emoji(proc_str[-1],  proc_str[:-1], 5)] + random.sample(self.emoji_list, 4))
+
+            return " | ".join([self._word_to_emoji(proc_str[-1],  proc_str[:-1], 5)])+' | ' + " | ".join(emoji_senti[:5])
 
 
 
