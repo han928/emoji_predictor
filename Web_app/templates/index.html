@@ -2,12 +2,17 @@
 <html lang="en">
 
 <head>
+    <link rel="icon" href="../static/img/emoji_profile.png">
+
+    <!-- Twemoji support -->
+    <script src="//twemoji.maxcdn.com/2/twemoji.min.js"></script>
 
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="">
     <meta name="author" content="">
+    <meta charset="UTF-8">
 
     <title>😀 Emoji Predictor</title>
 
@@ -91,7 +96,7 @@
     <!-- Portfolio Grid Section -->
     <section id="prediction">
         <div class="container text-center">
-            <h3 class='section-heading'>Let's translate your next word to emoji-font 😉</h3>
+            <h1 class='section-heading'>Let's translate your next word to emoji-font 😉</h3>
             <hr class='primary'>
                     <form class="form-group" role="search" action="/predict" method ='post'>
                 <div class="input-group" style="width:750px;text-align:center;margin:0 auto;">
@@ -102,15 +107,21 @@
                     </span>
                 </div>
                 <br>
-
+                	<!-- &#x1F644 -->
                 {% if prediction %}
-                    <h3 class='section-heading'>You enters: {{ preceding_wd }} </h3>
+                    <h2 class='section-heading'>You enter: {{ preceding_wd }} </h3>
                 <br>
-                    <h3 class='section-heading'>Predictions: {{ prediction }} !</h3>
+                <br>
+                <br>
+
+                    <h1 class='section-heading'>Predictions: {{ prediction }} !</h3>
                 {% else %}
-                <h3 class='section-heading'>You enters:                      </h3>
+                <h2 class='section-heading'>You enter:                      </h3>
             <br>
-                <h3 class='section-heading'>Predictions:                      </h3>
+            <br>
+            <br>
+
+                <h1 class='section-heading'>Predictions:                      </h3>
 
                 {% endif %}
             </form>
@@ -146,11 +157,11 @@
                     <hr class="primary">
                     <p>Interested in me or like to discuss? That's great! Give me a call or send me an email and I will get back to you ASAP!</p>
                 </div>
-                <div class="col-lg-4 col-lg-offset-2 text-center">
-                    <i class="fa fa-phone fa-3x wow bounceIn"></i>
-                    <p>352-870-4849</p>
+                <div class="col-lg-4 col-lg-offset-0 text-center">
+                    <!-- <i class="fa fa-phone fa-3x wow bounceIn"></i> -->
+                    <!-- <p>352-870-4849</p> -->
                 </div>
-                <div class="col-lg-4 text-center">
+                <div class="col-lg-4 text-center text-center">
                     <i class="fa fa-envelope-o fa-3x wow bounceIn" data-wow-delay=".1s"></i>
                     <p><a href="mailto:your-email@your-domain.com">tzunghan.lai@gmail.com</a></p>
                 </div>
@@ -180,7 +191,7 @@
                     </div>
                     <div class="footer-col col-md-4">
                         <h3>About Han</h3>
-                        <p>I'm data scientis with passion to tell story from data through machine learning techniques with a backgroudn in physics.</p>
+                        <p>I'm a data scientist with passion for telling story from data through machine learning techniques with a backgroudn in physics.</p>
                     </div>
                 </div>
             </div>
@@ -204,7 +215,7 @@
     </div>
 
     <!-- Portfolio Modals -->
-    <div class="portfolio-modal modal fade" id="portfolioModal1" tabindex="-1" role="dialog" aria-hidden="true">
+    <!-- <div class="portfolio-modal modal fade" id="portfolioModal1" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-content">
             <div class="close-modal" data-dismiss="modal">
                 <div class="lr">
@@ -425,7 +436,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <!-- jQuery -->
     <script src="../static/js/jquery.js"></script>
@@ -445,6 +456,8 @@
     <!-- Custom Theme JavaScript -->
     <script src="../static/js/freelancer.js"></script>
 
+    <!-- for twemoji -->
+    <script src="../static/js/emoji.js"></script>
 </body>
 
 </html>

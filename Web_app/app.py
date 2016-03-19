@@ -1,7 +1,6 @@
 from flask import Flask, request, render_template
 import cPickle as pickle
-import unirest
-from tweet_parse import *
+from word_predictor import WordPredictor
 
 
 WP = WordPredictor()

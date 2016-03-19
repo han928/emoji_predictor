@@ -87,7 +87,7 @@ class WordPredictor(object):
 
 
 
-    def fit(self, data=None, w_bi=1./10, w_tri=1./10, w_quad=7./10, w_emoji = 0.0003/10, train = False):
+    def fit(self, data=None, w_bi=1./20, w_tri=7./10, w_quad=12./20, w_emoji = 0.0003/10, train = False):
         """
         data: sc.textFile() object
         TODO:  save bigram, trigram, quagram dict to pickle
@@ -242,7 +242,7 @@ class WordPredictor(object):
         self.w_quad = w_quad
         self.w_emoji = w_emoji
 
-    def _interpolation_model(self, proc_str, string, senti):
+    def _interpolation_model(self, proc_str, string, senti=False):
         """
         calculating the probability of all word frequencies from previous n_grams
         """
@@ -269,16 +269,16 @@ class WordPredictor(object):
         NUM_EMOJI_OUTPUT = 5
         # preprocess the string as you preprocess tweets
         proc_str = self._emoji_preprocess(string, predict=True)
-        SLM = self._interpolation_model(proc_str, string, senti)   # SLM means imple linear interpolation
+        SLM = self._interpolation_model(proc_str, string, senti)   # SLM means simple linear interpolation
         emoji_senti_ls = zip(*self.senti_condFreq[self._sentiment(string)].most_common())[0] # get emoji recommendation for sentiment
 
-        emoji_senti =[]
-
-        for emoji in emoji_senti_ls:
-            if emoji not in self.emoji_modifier:
-                emoji_senti.append(emoji)
-            if len(emoji_senti)>=5:
-                break
+        # emoji_senti =[]
+        #
+        # for emoji in emoji_senti_ls:
+        #     if emoji not in self.emoji_modifier:
+        #         emoji_senti.append(emoji)
+        #     if len(emoji_senti)>=5:
+        #         break
 
 
         if len(SLM) != 0 and SLM != '<s>':
@@ -301,13 +301,24 @@ class WordPredictor(object):
             emojis += additional_emoji
 
 
-            print   'Predictions:'," | ".join(emojis[:5]) +' | '+ " | ".join(emoji_senti[:5])
-            return " | ".join(emojis[:5]) +' | '+ " | ".join(emoji_senti[:5])
+            # print   'Predictions:'," | ".join(emojis[:5]) +' | '+ " | ".join(emoji_senti[:5])
+            output =  " | ".join(emojis[:5]) +' | '
         else:
-            print "no word in interpolation"
-            print "prediction with no word in interpolation",self._word_to_emoji(proc_str[-1],  proc_str[:-1], 5)
+            # print "no word in interpolation"
+            # print "prediction with no word in interpolation"
+            # print "result\n", self._word_to_emoji(proc_str[-1],  proc_str[:-1], 5)
+            emojis = self._word_to_emoji(proc_str[-1],  proc_str[:-1], 5)
+            output =  " | ".join(emojis)+' | '
 
-            return " | ".join([self._word_to_emoji(proc_str[-1],  proc_str[:-1], 5)])+' | ' + " | ".join(emoji_senti[:5])
+        # emoji_senti =[]
+
+        for emoji in emoji_senti_ls:
+            if emoji not in self.emoji_modifier and emoji not in emojis:
+                emojis.append(emoji)
+            if len(emojis)==10:
+                break
+
+        return " | ".join(emojis[:10])
 
 
 
@@ -317,17 +328,13 @@ class WordPredictor(object):
         turn word into emojis by looking into similarity of predicted words.
         if predicted word not in w2v model, use the last word to find similar emojis
         """
-        # try:
-        #     return self._similar_word(wd)
-        # except:
-        #     print 'exception error'
-        #     return u'\U0001f600'
+
+        print 'find similar words for:',  wd, proc_str
 
         wd_vect = self.w2v_vect[self.w2v_idx == wd]
         sim_word = self.w2v_idx[cdist(wd_vect, self.w2v_vect, 'cosine').argsort().flatten()]
         if not wd_vect.any():
             wd = proc_str[-1]
-            print "no word in w2v ", wd
 
             return self._word_to_emoji(wd, proc_str[:-1], n)
         else:
@@ -336,7 +343,12 @@ class WordPredictor(object):
                 if w in self.emoji_list:
                     emojis.append(w)
                 if len(emojis) == n:
-                    return w
+                    return emojis
+
+
+
+
+
 
     def _build_w2v(self):
         """
@@ -345,29 +357,12 @@ class WordPredictor(object):
         word2vec = Word2Vec()
         self.w2v = word2vec.fit(self.tweets)
 
-    # def _similar_word(self, wd, n=1):
-    #     wd_vect = self.w2v_vect[self.w2v_idx == wd]
-    #     sim_word = self.w2v_idx[cdist(wd_vect, self.w2v_vect, 'cosine').argsort().flatten()]
-    #     if not wd_vect.any():
-    #         print 'not such word in w2v'
-    #         return u'\U0001f600'
-    #     else:
-    #         emojis = []
-    #         for w in sim_word:
-    #             if w in self.emoji_list:
-    #                 emojis.append(w)
-    #             if len(emojis) == n:
-    #                 return w
-    #
-    #
-
-
     def _score(self, proc_str):
         """
         calculate the perplexity score for a single string
         """
         # proc_str = self._emoji_preprocess(string)
-        perplexity = 1.0
+        prob = 0.0
 
         # check length of words
         if len(proc_str) > 4 :
@@ -394,37 +389,47 @@ class WordPredictor(object):
 
             pred = seg[-1]
 
-            prob =  (self.w_quad * self.quadgram_dict[str(quad)][pred]\
+            prob +=  (self.w_quad * self.quadgram_dict[str(quad)][pred]\
                             + self.w_tri * self.trigram_dict[str(tri)][pred]\
                                 + self.w_bi * self.bigram_dict[bi][pred])
 
-            if prob == 0:
-                perplexity*=1
-            else:
-                perplexity *= prob
-
-        return np.power(perplexity, 1./k)
 
 
-    def perplexity_score(self, data):
+
+
+        return prob/k
+
+    def perplexity_score(self, tweets):
         """
         calculate perplexity_score for a corpus
         data: rdd/ list of sentence
         """
-        tweets =  data\
-                .filter(lambda tw: len(tw)>1)\
-                .filter(lambda tw: 'created_at' in tw)\
-                .map(self._tweet_process)\
-                .filter(lambda tw: tw != None)\
-                .map(lambda tw: tw['text'].lower() )\
-                .map(self._emoji_preprocess).collect()
-
+        # if not self.tweets:
+            # tweets =data
+            #         .filter(lambda tw: len(tw)>1)\
+            #         .filter(lambda tw: 'created_at' in tw)\
+            #         .map(WP._tweet_process)\
+            #         .filter(lambda tw: tw != None)\
+            #         .map(lambda tw: tw['text'].lower() )\
+            #         .map(WP._emoji_preprocess).collect()
+        #
         score = 0
+        n = 0
         for tw in tweets:
+            n += 1
             score += self._score(tw)
 
-        return score
+        return score/n
 
+    def average_prob(self, proc_str):
+        """
+        calculate the average probability of a hold out dataset
+        data: list of strings
+        """
+
+
+
+        emoji_senti_ls = zip(*self.senti_condFreq[self._sentiment(string)].most_common())[0] # get emoji recommendation for sentiment
 
 
 

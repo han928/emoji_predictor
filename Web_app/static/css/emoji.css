@@ -54,3 +54,14 @@ section h2 {
 header .intro-text .skills {
     color: #16727A;
 }
+
+img.emoji {
+  // Override any img styles to ensure Emojis are displayed inline
+  width: 36px;
+  display: inline !important;
+
+}
+img.emoji {
+    display: inline !important;
+    width: 36px;
+}

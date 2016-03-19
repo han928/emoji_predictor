@@ -50,9 +50,9 @@ I than look at the emoji usage under different sentiments.
 
     According to emojipedia
 
-        >A laughing emoji which at small sizes is often mistaken for being tears of sadness. This emoji is laughing so much that it is crying tears of joy.
+        >A laughing emoji which at small sizes is often mistaken for being tears of sadness.
 
-    which could be the reason of this
+    which could be the reason of the phenomenon
 
 
 
