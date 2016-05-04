@@ -96,12 +96,12 @@
     <!-- Portfolio Grid Section -->
     <section id="prediction">
         <div class="container text-center">
-            <h1 class='section-heading'>Let's translate your next word to emoji-font 😉</h3>
+            <h1 class='section-heading'>Let's emojized your text 😉</h3>
             <hr class='primary'>
                     <form class="form-group" role="search" action="/predict" method ='post'>
                 <div class="input-group" style="width:750px;text-align:center;margin:0 auto;">
 
-                    <input type="text" class="form-control" placeholder="Type your words here.." aria-describedby="basic-addon2" name="precede_words">
+                    <input type="text" class="form-control" placeholder="Let's see what you have here..." aria-describedby="basic-addon2" name="image">
                     <span class='input-group-btn'>
                         <button type="submit" class="btn btn-md btn-default">Predict</button>
                     </span>
@@ -109,14 +109,14 @@
                 <br>
                 	<!-- &#x1F644 -->
                 {% if prediction %}
-                    <h2 class='section-heading'>You enter: {{ preceding_wd }} </h3>
+                    <h2 class='section-heading'>You entered: {{ preceding_wd }} </h3>
                 <br>
                 <br>
                 <br>
 
                     <h1 class='section-heading'>Predictions: {{ prediction }} !</h3>
                 {% else %}
-                <h2 class='section-heading'>You enter:                      </h3>
+                <h2 class='section-heading'>You entered:                      </h3>
             <br>
             <br>
             <br>
