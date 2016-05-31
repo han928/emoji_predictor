@@ -1,5 +1,7 @@
 # emoji_predictor
 
+#(Please check out [http://emojipredictor.net/](http://emojipredictor.net/) for demo)
+
 
 ## Motivation:
 Emoji has been a part of our everyday life that capture of emotions and ideas better than text. It also serves as a language that overcome language barriers. In this project I'm trying to predict the Emoji uses to help and encourage use of Emoji.
